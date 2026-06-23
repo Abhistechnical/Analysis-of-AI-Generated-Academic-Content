@@ -1,12 +1,12 @@
 {
   "experimentalServices": {
     "frontend": {
-      "root": "frontend",
-      "routePrefix": "/",
-      "framework": "vite"
+      "entrypoint": "frontend",
+      "framework": "vite",
+      "routePrefix": "/"
     },
     "backend": {
-      "root": "backend",
+      "entrypoint": "backend/app/main.py",
       "routePrefix": "/_/backend"
     }
   }
