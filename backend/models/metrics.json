@@ -1,0 +1,40 @@
+{
+  "best_model": "Logistic Regression",
+  "models": {
+    "Logistic Regression": {
+      "train_accuracy": 1.0,
+      "test_accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0
+    },
+    "Random Forest": {
+      "train_accuracy": 1.0,
+      "test_accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0
+    },
+    "SVM": {
+      "train_accuracy": 1.0,
+      "test_accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0
+    }
+  },
+  "dataset": {
+    "total_samples": 1000,
+    "ai_samples": 500,
+    "human_samples": 500,
+    "train_size": 800,
+    "test_size": 200
+  },
+  "best_metrics": {
+    "train_accuracy": 1.0,
+    "test_accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1_score": 1.0
+  }
+}
