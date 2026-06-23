@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const API = import.meta.env.DEV ? 'http://localhost:8000/api' : '/_/backend/api';
+import { API, handleResponse } from '../utils/api';
 
 /**
  * ModelInfo — About Model page showing algorithms, dataset, and metrics.
@@ -18,8 +18,7 @@ export default function ModelInfo() {
     try {
       setLoading(true);
       const res = await fetch(`${API}/model-info`);
-      if (!res.ok) throw new Error('Failed to fetch model info');
-      const data = await res.json();
+      const data = await handleResponse(res, 'Failed to fetch model info');
       setInfo(data);
     } catch (err) {
       setError(err.message);

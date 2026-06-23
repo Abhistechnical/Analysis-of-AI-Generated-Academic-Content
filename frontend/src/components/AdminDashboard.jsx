@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import PredictionHistory from './PredictionHistory';
 
-const API = import.meta.env.DEV ? 'http://localhost:8000/api' : '/_/backend/api';
+import { API, handleResponse } from '../utils/api';
 
 /**
  * AdminDashboard — Admin panel for dataset management, retraining, and history.
@@ -23,8 +23,7 @@ export default function AdminDashboard() {
   const fetchHistory = async () => {
     try {
       const res = await fetch(`${API}/admin/history?page=${page}&per_page=${perPage}`);
-      if (!res.ok) throw new Error('Failed to fetch history');
-      const data = await res.json();
+      const data = await handleResponse(res, 'Failed to fetch history');
       setHistory(data.predictions);
       setTotalHistory(data.total);
     } catch (err) {
@@ -46,8 +45,7 @@ export default function AdminDashboard() {
         method: 'POST',
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Upload failed');
+      const data = await handleResponse(res, 'Upload failed');
       setMessage({ type: 'success', text: `✓ ${data.message}` });
     } catch (err) {
       setMessage({ type: 'error', text: `✗ ${err.message}` });
@@ -62,8 +60,7 @@ export default function AdminDashboard() {
       setRetraining(true);
       setMessage(null);
       const res = await fetch(`${API}/admin/retrain`, { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Retraining failed');
+      const data = await handleResponse(res, 'Retraining failed');
       setMessage({
         type: 'success',
         text: `✓ ${data.message} — Accuracy: ${(data.metrics.accuracy * 100).toFixed(1)}%`,
@@ -78,7 +75,9 @@ export default function AdminDashboard() {
   const handleExport = async () => {
     try {
       const res = await fetch(`${API}/admin/export`);
-      if (!res.ok) throw new Error('Export failed');
+      if (!res.ok) {
+        await handleResponse(res, 'Export failed');
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

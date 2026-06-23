@@ -109,6 +109,7 @@ async def retrain_model(db: Session = Depends(get_db)):
             ),
         )
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Retraining failed: {str(e)}")
 
 

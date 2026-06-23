@@ -23,11 +23,59 @@ from scipy.sparse import hstack, csr_matrix
 
 from app.ml.features import extract_feature_vector
 from app.ml.dataset import generate_dataset
+import shutil
 
 # Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DATA_DIR = os.path.join(BASE_DIR, "data")
-MODEL_DIR = os.path.join(BASE_DIR, "models")
+DEFAULT_DATA_DIR = os.path.join(BASE_DIR, "data")
+DEFAULT_MODEL_DIR = os.path.join(BASE_DIR, "models")
+
+def is_writable(path):
+    try:
+        os.makedirs(path, exist_ok=True)
+        test_file = os.path.join(path, '.test_write')
+        with open(test_file, 'w') as f:
+            f.write('test')
+        os.remove(test_file)
+        return True
+    except Exception:
+        return False
+
+# Determine writable directories
+if os.environ.get("VERCEL") or not is_writable(DEFAULT_MODEL_DIR):
+    MODEL_DIR = "/tmp/models"
+    if os.path.exists(DEFAULT_MODEL_DIR) and not os.path.exists(MODEL_DIR):
+        try:
+            os.makedirs(MODEL_DIR, exist_ok=True)
+            for file_name in ["best_model.pkl", "tfidf_vectorizer.pkl", "feature_scaler.pkl", "metrics.json"]:
+                src = os.path.join(DEFAULT_MODEL_DIR, file_name)
+                dst = os.path.join(MODEL_DIR, file_name)
+                if os.path.exists(src):
+                    shutil.copy(src, dst)
+                    os.chmod(dst, 0o666)
+            print(f"Copied ML models to {MODEL_DIR}")
+        except Exception as e:
+            print(f"Failed to copy ML models to /tmp: {e}")
+else:
+    MODEL_DIR = DEFAULT_MODEL_DIR
+
+if os.environ.get("VERCEL") or not is_writable(DEFAULT_DATA_DIR):
+    DATA_DIR = "/tmp/data"
+    if os.path.exists(DEFAULT_DATA_DIR) and not os.path.exists(DATA_DIR):
+        try:
+            os.makedirs(DATA_DIR, exist_ok=True)
+            for file_name in ["dataset.csv"]:
+                src = os.path.join(DEFAULT_DATA_DIR, file_name)
+                dst = os.path.join(DATA_DIR, file_name)
+                if os.path.exists(src):
+                    shutil.copy(src, dst)
+                    os.chmod(dst, 0o666)
+            print(f"Copied dataset to {DATA_DIR}")
+        except Exception as e:
+            print(f"Failed to copy dataset to /tmp: {e}")
+else:
+    DATA_DIR = DEFAULT_DATA_DIR
+
 DATASET_PATH = os.path.join(DATA_DIR, "dataset.csv")
 MODEL_PATH = os.path.join(MODEL_DIR, "best_model.pkl")
 TFIDF_PATH = os.path.join(MODEL_DIR, "tfidf_vectorizer.pkl")

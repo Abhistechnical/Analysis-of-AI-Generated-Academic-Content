@@ -9,7 +9,7 @@ import ModelInfo from './components/ModelInfo';
 import AdminDashboard from './components/AdminDashboard';
 import './App.css';
 
-const API = import.meta.env.DEV ? 'http://localhost:8000/api' : '/_/backend/api';
+import { API, handleResponse } from './utils/api';
 
 /**
  * App — Main application shell with tab navigation and analysis workflow.
@@ -33,12 +33,7 @@ export default function App() {
         body: JSON.stringify({ text }),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'Analysis failed');
-      }
-
-      const data = await res.json();
+      const data = await handleResponse(res, 'Analysis failed');
       setResult(data);
 
       // Scroll to results
@@ -66,12 +61,7 @@ export default function App() {
         body: formData,
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || 'File analysis failed');
-      }
-
-      const data = await res.json();
+      const data = await handleResponse(res, 'File analysis failed');
       setResult(data);
 
       // Scroll to results

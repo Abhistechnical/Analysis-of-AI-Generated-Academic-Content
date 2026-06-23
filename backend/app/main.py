@@ -16,17 +16,26 @@ from app.routes import analysis, model_info, admin
 async def lifespan(app: FastAPI):
     """Startup and shutdown logic."""
     # Initialize database
-    print("Initializing database...")
-    init_db()
+    try:
+        print("Initializing database...")
+        init_db()
+    except Exception as e:
+        print(f"CRITICAL: Database initialization failed: {e}")
 
     # Auto-train model if not already trained
-    if not is_trained():
-        print("No trained model found. Training initial model...")
-        train_models()
+    try:
+        if not is_trained():
+            print("No trained model found. Training initial model...")
+            train_models()
+    except Exception as e:
+        print(f"CRITICAL: Auto-training failed: {e}")
 
     # Load model into memory
-    print("Loading model...")
-    load_model()
+    try:
+        print("Loading model...")
+        load_model()
+    except Exception as e:
+        print(f"CRITICAL: Model loading failed: {e}")
 
     print("OK - Server ready!")
     yield
@@ -40,6 +49,22 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+import traceback
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    tb = traceback.format_exc()
+    print(f"Unhandled exception occurred: {exc}\n{tb}")
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": f"Internal Server Error: {str(exc)}",
+            "traceback": tb
+        }
+    )
 
 # CORS - allow frontend
 app.add_middleware(
