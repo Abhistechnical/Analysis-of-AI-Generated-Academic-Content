@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import PredictionHistory from './PredictionHistory';
 
-const API = 'http://localhost:8000/api';
+const API = import.meta.env.DEV ? 'http://localhost:8000/api' : '/_/backend/api';
 
 /**
  * AdminDashboard — Admin panel for dataset management, retraining, and history.

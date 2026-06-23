@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const API = 'http://localhost:8000/api';
+const API = import.meta.env.DEV ? 'http://localhost:8000/api' : '/_/backend/api';
 
 /**
  * ModelInfo — About Model page showing algorithms, dataset, and metrics.

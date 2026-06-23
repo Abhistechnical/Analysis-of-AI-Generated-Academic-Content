@@ -9,7 +9,7 @@ import ModelInfo from './components/ModelInfo';
 import AdminDashboard from './components/AdminDashboard';
 import './App.css';
 
-const API = 'http://localhost:8000/api';
+const API = import.meta.env.DEV ? 'http://localhost:8000/api' : '/_/backend/api';
 
 /**
  * App — Main application shell with tab navigation and analysis workflow.
