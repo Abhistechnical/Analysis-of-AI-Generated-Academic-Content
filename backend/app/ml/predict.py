@@ -146,6 +146,42 @@ def _compute_indicators(features: dict) -> list:
         "score": round(pred_score, 4)
     })
 
+    # NEW: Transition Word Density (AI marker)
+    trans_score = features["transition_word_density"]
+    trans_level = "High" if trans_score > 0.02 else ("Medium" if trans_score > 0.01 else "Low")
+    indicators.append({
+        "name": "Formulaic Transitions",
+        "value": trans_level,
+        "score": round(trans_score, 4)
+    })
+
+    # NEW: Passive Voice Ratio (AI marker)
+    pass_score = features["passive_voice_ratio"]
+    pass_level = "High" if pass_score > 0.5 else ("Medium" if pass_score > 0.25 else "Low")
+    indicators.append({
+        "name": "Passive Voice Usage",
+        "value": pass_level,
+        "score": round(pass_score, 4)
+    })
+
+    # NEW: Contraction Density (Human marker - inverted)
+    cont_score = features["contraction_density"]
+    cont_level = "High" if cont_score > 0.02 else ("Medium" if cont_score > 0.005 else "Low")
+    indicators.append({
+        "name": "Informal Language (Contractions)",
+        "value": cont_level,
+        "score": round(cont_score, 4)
+    })
+
+    # NEW: Burstiness (Human marker)
+    burst_score = features["burstiness_score"]
+    burst_level = "High" if burst_score > 0.8 else ("Medium" if burst_score > 0.4 else "Low")
+    indicators.append({
+        "name": "Writing Burstiness",
+        "value": burst_level,
+        "score": round(burst_score, 4)
+    })
+
     return indicators
 
 
@@ -168,7 +204,7 @@ def _compute_feature_importances(feature_vector: list) -> list:
                     "score": round(float(coef / total), 4)
                 })
         elif hasattr(_model, 'feature_importances_'):
-            # Random Forest: use last N importances
+            # Random Forest / Gradient Boosting: use last N importances
             fi = _model.feature_importances_[-len(FEATURE_NAMES):]
             total = fi.sum() if fi.sum() > 0 else 1
             for name, imp in zip(FEATURE_NAMES, fi):

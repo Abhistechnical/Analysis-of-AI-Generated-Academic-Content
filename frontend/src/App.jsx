@@ -183,6 +183,7 @@ ${result.indicators.map(i => `  ${i.name}: ${i.value}`).join('\n')}
       <footer className="app-footer">
         <div className="container">
           <p>AI Academic Content Detector • Built with React, FastAPI & Scikit-Learn</p>
+          <p className="footer-project-info" style={{ marginTop: '8px', opacity: 0.85 }}>Abhishek And Palak Ntcc Project</p>
         </div>
       </footer>
     </>

@@ -1,21 +1,21 @@
 """
 Model training pipeline.
 
-Trains Logistic Regression, Random Forest, and SVM classifiers
-using TF-IDF + linguistic features. Selects the best performing model.
+Trains Logistic Regression, Random Forest, SVM, and Gradient Boosting
+classifiers using TF-IDF + comprehensive linguistic features.
+Uses cross-validation and selects the best performing model.
 """
 import os
 import json
 import joblib
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score
 )
@@ -44,10 +44,12 @@ def is_writable(path):
 # Determine writable directories
 if os.environ.get("VERCEL") or not is_writable(DEFAULT_MODEL_DIR):
     MODEL_DIR = "/tmp/models"
-    if os.path.exists(DEFAULT_MODEL_DIR) and not os.path.exists(MODEL_DIR):
+    files_to_copy = ["best_model.pkl", "tfidf_vectorizer.pkl", "feature_scaler.pkl", "metrics.json"]
+    model_files_exist_in_tmp = all(os.path.exists(os.path.join(MODEL_DIR, f)) for f in files_to_copy)
+    if os.path.exists(DEFAULT_MODEL_DIR) and not model_files_exist_in_tmp:
         try:
             os.makedirs(MODEL_DIR, exist_ok=True)
-            for file_name in ["best_model.pkl", "tfidf_vectorizer.pkl", "feature_scaler.pkl", "metrics.json"]:
+            for file_name in files_to_copy:
                 src = os.path.join(DEFAULT_MODEL_DIR, file_name)
                 dst = os.path.join(MODEL_DIR, file_name)
                 if os.path.exists(src):
@@ -87,7 +89,7 @@ def ensure_dataset():
     """Generate dataset if it doesn't exist."""
     if not os.path.exists(DATASET_PATH):
         print("Generating synthetic dataset...")
-        generate_dataset(DATASET_PATH, num_samples=1000)
+        generate_dataset(DATASET_PATH, num_samples=3000)
     return DATASET_PATH
 
 
@@ -96,7 +98,7 @@ def prepare_features(texts: list, tfidf: TfidfVectorizer = None,
     """
     Prepare combined feature matrix from texts.
 
-    Combines TF-IDF features with custom linguistic features.
+    Combines TF-IDF features with comprehensive linguistic features.
     """
     # Extract custom features
     custom_features = np.array([extract_feature_vector(t) for t in texts])
@@ -105,11 +107,12 @@ def prepare_features(texts: list, tfidf: TfidfVectorizer = None,
         # Fit and transform
         if tfidf is None:
             tfidf = TfidfVectorizer(
-                max_features=500,
-                ngram_range=(1, 2),
+                max_features=2000,
+                ngram_range=(1, 3),
                 stop_words="english",
                 min_df=2,
-                max_df=0.95
+                max_df=0.95,
+                sublinear_tf=True,       # Apply log normalization
             )
         tfidf_matrix = tfidf.fit_transform(texts)
 
@@ -141,6 +144,8 @@ def train_models(dataset_path: str = None) -> dict:
     labels = df["label"].values
 
     print(f"Loaded dataset: {len(texts)} samples")
+    print(f"  AI samples: {sum(labels)}")
+    print(f"  Human samples: {len(labels) - sum(labels)}")
 
     # Train/test split
     X_texts_train, X_texts_test, y_train, y_test = train_test_split(
@@ -148,19 +153,46 @@ def train_models(dataset_path: str = None) -> dict:
     )
 
     # Prepare features
+    print("Extracting features...")
     X_train, tfidf, scaler = prepare_features(X_texts_train, fit=True)
     X_test, _, _ = prepare_features(X_texts_test, tfidf=tfidf, scaler=scaler)
 
-    # Define classifiers
+    print(f"Feature matrix shape: {X_train.shape}")
+
+    # Define classifiers with improved hyperparameters
     classifiers = {
         "Logistic Regression": LogisticRegression(
-            max_iter=1000, random_state=42, C=1.0
+            max_iter=2000,
+            random_state=42,
+            C=5.0,
+            class_weight="balanced",
+            solver="lbfgs",
         ),
         "Random Forest": RandomForestClassifier(
-            n_estimators=100, random_state=42, max_depth=20
+            n_estimators=200,
+            random_state=42,
+            max_depth=30,
+            min_samples_split=5,
+            min_samples_leaf=2,
+            class_weight="balanced",
+            n_jobs=-1,
         ),
         "SVM": SVC(
-            kernel="rbf", probability=True, random_state=42, C=1.0
+            kernel="rbf",
+            probability=True,
+            random_state=42,
+            C=10.0,
+            gamma="scale",
+            class_weight="balanced",
+        ),
+        "Gradient Boosting": GradientBoostingClassifier(
+            n_estimators=200,
+            random_state=42,
+            max_depth=5,
+            learning_rate=0.1,
+            min_samples_split=5,
+            min_samples_leaf=2,
+            subsample=0.8,
         ),
     }
 
@@ -198,6 +230,16 @@ def train_models(dataset_path: str = None) -> dict:
             best_model = clf
             best_name = name
 
+    # Cross-validation on the best model
+    print(f"\nRunning 5-fold cross-validation on {best_name}...")
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    cv_scores = cross_val_score(
+        classifiers[best_name].__class__(**classifiers[best_name].get_params()),
+        X_train, y_train, cv=cv, scoring='f1', n_jobs=-1
+    )
+    print(f"  CV F1 scores: {cv_scores}")
+    print(f"  CV F1 mean: {cv_scores.mean():.4f} (+/- {cv_scores.std() * 2:.4f})")
+
     print(f"\nBest model: {best_name} (F1={best_f1:.4f})")
 
     # Save artifacts
@@ -217,6 +259,12 @@ def train_models(dataset_path: str = None) -> dict:
             "test_size": len(y_test),
         },
         "best_metrics": results[best_name],
+        "cross_validation": {
+            "folds": 5,
+            "f1_scores": [round(s, 4) for s in cv_scores.tolist()],
+            "f1_mean": round(cv_scores.mean(), 4),
+            "f1_std": round(cv_scores.std(), 4),
+        },
     }
 
     with open(METRICS_PATH, "w") as f:
